@@ -23,29 +23,20 @@ def check_password():
         return True
 
     def password_entered():
-        if st.session_state["password"] == senha_correta:
+        # Utiliza o .get() de forma segura para evitar o KeyError
+        senha_digitada = st.session_state.get("password", "")
+        
+        if senha_digitada == senha_correta:
             st.session_state["password_correct"] = True
             # Cria um cookie que dura 30 dias
             validade = datetime.datetime.now() + datetime.timedelta(days=30)
             cookie_manager.set("monitor_auth", senha_correta, expires_at=validade)
-            del st.session_state["password"]
+            
+            # Remove a chave apenas se ela existir
+            if "password" in st.session_state:
+                del st.session_state["password"]
         else:
             st.session_state["password_correct"] = False
-
-    if st.session_state.get("password_correct", False):
-        return True
-
-    st.text_input(
-        "🔒 Digite a senha de acesso:", 
-        type="password",
-        on_change=password_entered,
-        key="password"
-    )
-    
-    if "password_correct" in st.session_state and not st.session_state["password_correct"]:
-        st.error("😕 Senha incorreta.")
-        
-    return False
 
 def make_api_request(method, url, json=None, params=None, max_retries=3):
     """
