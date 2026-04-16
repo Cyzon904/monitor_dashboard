@@ -3,11 +3,16 @@ import requests
 import time
 import pymongo
 import datetime
+import uuid
 import extra_streamlit_components as stx
 
 def get_cookie_manager():
-    # Sem o st.cache_resource aqui e com uma chave de identificação
-    return stx.CookieManager(key="auth_cookie_manager")
+    # NOVO: Cria uma chave única para cada aba do navegador
+    # Isso impede que o Streamlit Cloud confunda as abas e dê a tela branca
+    if "cookie_manager_key" not in st.session_state:
+        st.session_state["cookie_manager_key"] = f"cookie_{uuid.uuid4().hex}"
+        
+    return stx.CookieManager(key=st.session_state["cookie_manager_key"])
 
 def check_password():
     """Gerencia a autenticacao via secrets e guarda a sessao em Cookies."""
@@ -16,27 +21,62 @@ def check_password():
         return False
 
     cookie_manager = get_cookie_manager()
+    st.session_state["_cookie_manager"] = cookie_manager
     senha_correta = st.secrets["APP_PASSWORD"]
 
-    # 1. Verifica se o cookie ja esta guardado no navegador
-    if cookie_manager.get(cookie="monitor_auth") == senha_correta:
+    if st.session_state.get("logout_requested", False):
+        cookie_val = None 
+    else:
+        cookie_val = cookie_manager.get(cookie="monitor_auth")
+
+    if cookie_val == senha_correta:
         return True
 
     def password_entered():
-        # Utiliza o .get() de forma segura para evitar o KeyError
         senha_digitada = st.session_state.get("password", "")
         
         if senha_digitada == senha_correta:
             st.session_state["password_correct"] = True
-            # Cria um cookie que dura 30 dias
+            st.session_state["logout_requested"] = False 
+            
             validade = datetime.datetime.now() + datetime.timedelta(days=30)
             cookie_manager.set("monitor_auth", senha_correta, expires_at=validade)
             
-            # Remove a chave apenas se ela existir
             if "password" in st.session_state:
                 del st.session_state["password"]
         else:
             st.session_state["password_correct"] = False
+
+    if st.session_state.get("password_correct", False):
+        return True
+
+    st.text_input(
+        "🔒 Digite a senha de acesso:", 
+        type="password",
+        on_change=password_entered,
+        key="password"
+    )
+    
+    if "password_correct" in st.session_state and not st.session_state["password_correct"]:
+        st.error("😕 Senha incorreta.")
+        
+    return False
+
+def logout_button():
+    """Desenha um botão de sair na barra lateral"""
+    st.sidebar.markdown("---") 
+    
+    if st.sidebar.button("🚪 Sair do Sistema"):
+        if "_cookie_manager" in st.session_state:
+            st.session_state["_cookie_manager"].delete("monitor_auth")
+        
+        st.session_state["password_correct"] = False
+        st.session_state["logout_requested"] = True
+        st.rerun()
+
+# ==========================================
+# FUNÇÕES DE API E INTEGRAÇÕES RECUPERADAS
+# ==========================================
 
 def make_api_request(method, url, json=None, params=None, max_retries=3):
     """
@@ -101,6 +141,10 @@ def send_slack_alert(message):
         requests.post(webhook, json=payload)
     except Exception as e:
         print(f"Erro ao enviar alerta Slack: {e}")
+
+# ==========================================
+# FUNÇÕES DE BANCO DE DADOS (MONGO)
+# ==========================================
 
 @st.cache_resource
 def init_mongo_connection():
