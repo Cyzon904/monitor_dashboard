@@ -21,7 +21,7 @@ except KeyError:
     st.error("❌ Erro Crítico: 'INTERCOM_APP_ID' não encontrado no secrets.toml")
     st.stop()
 
-TEAMS_IDS = [2975006, 1972225] 
+TEAMS_IDS = ["2975006", "1972225"] 
 
 NOMES_TIMES = {
     2975006: "Customer Success - Atendimento - Distribuição das conversas",
@@ -80,22 +80,49 @@ def count_conversations(admin_id, state):
 @st.cache_data(ttl=60, show_spinner=False)
 def get_team_queue_details(team_id):
     url = "https://api.intercom.io/conversations/search"
+    
+    # O Intercom exige que IDs sejam strings na busca
     payload = {
         "query": {
             "operator": "AND",
             "value": [
                 {"field": "state", "operator": "=", "value": "open"},
-                {"field": "team_assignee_id", "operator": "=", "value": team_id}
+                {"field": "team_assignee_id", "operator": "=", "value": str(team_id)} 
             ]
         },
-        "pagination": {"per_page": 60}
+        "pagination": {"per_page": 150} # Aumentado o limite para trazer mais dados
     }
-    data = make_api_request("POST", url, json=payload)
+    
     detalhes_fila = []
+    data = make_api_request("POST", url, json=payload)
+    
     if data:
+        # Pega a primeira página de tickets
         for conv in data.get('conversations', []):
-            if conv.get('admin_assignee_id') is None:
+            # Validação mais segura do que "is None"
+            if not conv.get('admin_assignee_id'):
                 detalhes_fila.append({'id': conv['id']})
+                
+        # Varre as próximas páginas para garantir que nenhum ticket da fila fique de fora
+        pages = data.get('pages', {})
+        cursor = pages.get('next', {}).get('starting_after')
+        
+        limite_paginas = 0 # Prevenção de segurança
+        while cursor and limite_paginas < 5:
+            payload["pagination"]["starting_after"] = cursor
+            data_page = make_api_request("POST", url, json=payload)
+            
+            if not data_page:
+                break
+                
+            for conv in data_page.get('conversations', []):
+                if not conv.get('admin_assignee_id'):
+                    detalhes_fila.append({'id': conv['id']})
+                    
+            pages = data_page.get('pages', {})
+            cursor = pages.get('next', {}).get('starting_after')
+            limite_paginas += 1
+            
     return detalhes_fila
 
 @st.cache_data(ttl=60, show_spinner=False)
