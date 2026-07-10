@@ -38,7 +38,7 @@ AGENTS_MAP = {
     "heloisa.atm.slv@produttivo.com.br": "7455039",
     "danielle.ghesini@produttivo.com.br": "7628368",
     "jenyffer.souza@produttivo.com.br": "8115775",
-    "marcelo.misugi@produttivo.com.br": "8126602"
+    "jessica.zaruvne@produttivo.com.br": "11020708"
 }
 
 @st.cache_data(ttl=60, show_spinner=False)
