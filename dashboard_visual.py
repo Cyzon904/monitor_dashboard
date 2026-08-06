@@ -279,6 +279,47 @@ def get_aircall_stats(ts_inicio):
             
     return stats_agente, total_atendidas, detalhes_ligacoes
 
+@st.cache_data(ttl=60, show_spinner=False)
+def get_aircall_users_status():
+    """Busca o status atual de disponibilidade dos usuários no Aircall."""
+    if "AIRCALL_ID" not in st.secrets or "AIRCALL_TOKEN" not in st.secrets:
+        return {}
+
+    url = "https://api.aircall.io/v1/users"
+    auth = HTTPBasicAuth(st.secrets["AIRCALL_ID"], st.secrets["AIRCALL_TOKEN"])
+    
+    status_agentes = {}
+    page = 1
+    
+    while True:
+        try:
+            response = requests.get(url, auth=auth, params={"per_page": 50, "page": page})
+            if response.status_code != 200:
+                break
+                
+            data = response.json()
+            users = data.get('users', [])
+            
+            if not users:
+                break
+                
+            # Cruza o email do Aircall com o seu AGENTS_MAP
+            for u in users:
+                email = u.get('email', '').lower()
+                if email in AGENTS_MAP:
+                    intercom_id = AGENTS_MAP[email]
+                    status_agentes[intercom_id] = u.get('availability', 'offline')
+                    
+            if data.get('meta', {}).get('next_page_link'):
+                page += 1
+            else:
+                break
+        except Exception as e:
+            print(f"Erro ao buscar status no Aircall: {e}")
+            break
+            
+    return status_agentes
+
 @st.fragment(run_every=60)
 def atualizar_painel():
     st.title("🚀 Monitor Operacional (Tempo Real)") 
@@ -342,8 +383,24 @@ def atualizar_painel():
     ids_time = list(ids_time_set)
     ultimas = sorted(ultimas_temp, key=lambda x: x['created_at'], reverse=True)[:10]
 
-    stats_aircall, total_atendidas, detalhes_calls = get_aircall_stats(ts_inicio)
+    # --- NOVO: Chama a função de status do Aircall ---
+    status_aircall_agentes = get_aircall_users_status()
     
+    # --- NOVO: Mapeamento visual para o status do Aircall ---
+    mapa_status_aircall = {
+        'available': '🟢 Disp.',
+        'on_mobile': '📱 Mobile',
+        'in_call': '📞 Em Chamada',
+        'ringing': '🔔 Chamando',
+        'after_call_work': '📝 Pós-chamada',
+        'offline': '🔴 Offline',
+        'on_a_break': '☕ Pausa',
+        'out_for_lunch': '🍽️ Almoço',
+        'doing_back_office': '💻 Backoffice',
+        'do_not_disturb': '⛔ Ocupado',
+        'in_training': '🎓 Treinamento'
+    }
+
     online = 0
     tabela = []
     
@@ -363,6 +420,10 @@ def atualizar_painel():
         
         ligacoes = stats_aircall.get(sid, 0)
         
+        # --- NOVO: Pega o status do agente no Aircall e formata ---
+        status_ac_puro = status_aircall_agentes.get(sid, 'offline')
+        status_ac_format = mapa_status_aircall.get(status_ac_puro, f'⚪ {status_ac_puro}')
+        
         alerta = "⚠️" if abertos >= 10 else ""
         raio = "⚡" if volume_recente >= 3 else ""
         
@@ -373,7 +434,8 @@ def atualizar_painel():
             lista_alta_demanda.append(f"{info['name']} ({volume_recente})")
             
         tabela.append({
-            "Status": emoji,
+            "Status Int.": emoji,               # Renomeado para não confundir
+            "Status Aircall": status_ac_format, # Nova Coluna
             "Agente": info['name'],
             "Abertos": f"{abertos} {alerta}",
             "📞 Aircall": ligacoes, 
