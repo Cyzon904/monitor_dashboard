@@ -446,7 +446,7 @@ def atualizar_painel():
         })
 
     tabela = sorted(tabela, key=lambda x: x['Agente'])
-    tabela = sorted(tabela, key=lambda x: x['Status'], reverse=True)
+    tabela = sorted(tabela, key=lambda x: x['Status Int.'], reverse=True)
 
     msg_alerta = []
     
