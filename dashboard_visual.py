@@ -481,7 +481,7 @@ def atualizar_painel():
     if len(fila) > 0:
         msg_alerta.append(f"🔥 *CRÍTICO:* Existem *{len(fila)} clientes* aguardando na fila!")
     
-   if online < META_AGENTES:
+    if online < META_AGENTES:
         msg_alerta.append(f"⚠️ *ATENÇÃO INTERCOM:* Equipe abaixo da meta! Apenas *{online}/{META_AGENTES}* online.")
 
     # --- NOVO: Alerta de equipe abaixo da meta no Aircall ---
