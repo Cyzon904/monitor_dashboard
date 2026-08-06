@@ -678,7 +678,7 @@ def atualizar_painel():
         * ⚡ **Alta Demanda:** Agente recebeu 3+ tickets em 30min.
         
         **📞 Aircall (Telefonia)**
-        * 🟢 **Disp. / 📱 Mobile:** Online e disponível para receber ligações.
+        * 🟢 **Disp.:** Online e disponível para receber ligações.
         * 📞 **Em Chamada / 🔔 Chamando:** Atualmente em atendimento.
         * 📝 **Pós-chamada:** Finalizando o registro do atendimento anterior.
         * 🔴 **Offline / ☕ Pausa / 🍽️ Almoço / ⛔ Ocupado:** Indisponível para receber chamadas.
