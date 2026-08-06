@@ -28,7 +28,8 @@ NOMES_TIMES = {
     1972225: "Customer Success"
 }
 
-META_AGENTES = 4 
+META_AGENTES = 4
+META_AIRCALL = 2
 FUSO_BR = timezone(timedelta(hours=-3)) 
 
 AGENTS_MAP = {
@@ -425,6 +426,7 @@ def atualizar_painel():
     }
 
     online = 0
+    online_aircall = 0
     tabela = []
     
     lista_sobrecarga = []
@@ -443,9 +445,13 @@ def atualizar_painel():
         
         ligacoes = stats_aircall.get(sid, 0)
         
-        # --- NOVO: Pega o status do agente no Aircall e formata ---
+        # --- Pega o status do agente no Aircall e formata ---
         status_ac_puro = status_aircall_agentes.get(sid, 'offline')
         status_ac_format = mapa_status_aircall.get(status_ac_puro, f'⚪ {status_ac_puro}')
+        
+        # --- NOVO: Conta se o agente está online no Aircall (Disponível ou Em Chamada) ---
+        if status_ac_puro in ['available', 'in_call', 'on_mobile']:
+            online_aircall += 1
         
         alerta = "⚠️" if abertos >= 10 else ""
         raio = "⚡" if volume_recente >= 3 else ""
@@ -475,8 +481,12 @@ def atualizar_painel():
     if len(fila) > 0:
         msg_alerta.append(f"🔥 *CRÍTICO:* Existem *{len(fila)} clientes* aguardando na fila!")
     
-    if online < META_AGENTES:
-        msg_alerta.append(f"⚠️ *ATENÇÃO:* Equipe abaixo da meta! Apenas *{online}/{META_AGENTES}* online.")
+   if online < META_AGENTES:
+        msg_alerta.append(f"⚠️ *ATENÇÃO INTERCOM:* Equipe abaixo da meta! Apenas *{online}/{META_AGENTES}* online.")
+
+    # --- NOVO: Alerta de equipe abaixo da meta no Aircall ---
+    if online_aircall < META_AIRCALL:
+        msg_alerta.append(f"📞 *ATENÇÃO AIRCALL:* Equipe de telefonia abaixo da meta! Apenas *{online_aircall}/{META_AIRCALL}* online.")
 
     if lista_sobrecarga:
         nomes = ", ".join(lista_sobrecarga)
@@ -511,15 +521,20 @@ def atualizar_painel():
             
         st.toast("🔔 Alerta enviado para o Slack!", icon="📨")
 
-    c1, c2, c3, c4, c5 = st.columns(5) 
+    # --- NOVO: Mudamos para 6 colunas para caber a nova métrica ---
+    c1, c2, c3, c4, c5, c6 = st.columns(6) 
     
     c1.metric("Fila de Espera", len(fila), "Aguardando", delta_color="inverse")
     c2.metric(texto_volume, f"{vol_periodo} / {vol_rec}")
     
     c3.metric("📞 Ligações (Atendidas)", f"{total_atendidas}")
     
-    c4.metric("Agentes Online", online, f"Meta: {META_AGENTES}")
-    c5.metric("Atualizado", datetime.now(FUSO_BR).strftime("%H:%M:%S"))
+    c4.metric("Online Intercom", online, f"Meta: {META_AGENTES}")
+    
+    # --- NOVO: Métrica do Aircall na tela ---
+    c5.metric("Online Aircall", online_aircall, f"Meta: {META_AIRCALL}")
+    
+    c6.metric("Atualizado", datetime.now(FUSO_BR).strftime("%H:%M:%S"))
 
     if len(fila) > 0:
         st.error("🔥 **CRÍTICO: Clientes aguardando na fila!**")
@@ -533,7 +548,11 @@ def atualizar_painel():
         st.markdown(links_md, unsafe_allow_html=True)
 
     if online < META_AGENTES:
-        st.warning(f"⚠️ **Atenção:** Equipe abaixo da meta!")
+        st.warning(f"⚠️ **Atenção Intercom:** Equipe abaixo da meta!")
+        
+    # --- NOVO: Aviso vermelho no dashboard se o Aircall cair ---
+    if online_aircall < META_AIRCALL:
+        st.warning(f"📞 **Atenção Aircall:** Equipe de telefonia abaixo da meta ({online_aircall}/{META_AIRCALL})!")
 
     st.markdown("---")
 
