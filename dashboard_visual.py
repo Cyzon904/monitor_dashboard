@@ -281,41 +281,63 @@ def get_aircall_stats(ts_inicio):
 
 @st.cache_data(ttl=60, show_spinner=False)
 def get_aircall_users_status():
-    """Busca o status atual de disponibilidade dos usuários no Aircall."""
+    """Busca o status atual de disponibilidade dos usuários no Aircall usando o endpoint dedicado."""
     if "AIRCALL_ID" not in st.secrets or "AIRCALL_TOKEN" not in st.secrets:
         return {}
 
-    url = "https://api.aircall.io/v1/users"
     auth = HTTPBasicAuth(st.secrets["AIRCALL_ID"], st.secrets["AIRCALL_TOKEN"])
     
+    # 1. Mapeia os IDs internos do Aircall para os IDs do Intercom usando o e-mail
+    aircall_id_to_intercom = {}
+    page = 1
+    
+    while True:
+        try:
+            response = requests.get("https://api.aircall.io/v1/users", auth=auth, params={"per_page": 50, "page": page})
+            if response.status_code != 200: 
+                break
+                
+            data = response.json()
+            for u in data.get('users', []):
+                email = str(u.get('email', '')).lower().strip()
+                if email in AGENTS_MAP:
+                    aircall_id = u.get('id')
+                    aircall_id_to_intercom[aircall_id] = AGENTS_MAP[email]
+                    
+            if not data.get('meta', {}).get('next_page_link'): 
+                break
+            page += 1
+        except Exception as e:
+            print(f"Erro ao buscar usuários no Aircall: {e}")
+            break
+            
+    # 2. Busca o status em tempo real no endpoint específico de availabilities
     status_agentes = {}
     page = 1
     
     while True:
         try:
-            response = requests.get(url, auth=auth, params={"per_page": 50, "page": page})
-            if response.status_code != 200:
+            res_avail = requests.get("https://api.aircall.io/v1/users/availabilities", auth=auth, params={"per_page": 50, "page": page})
+            if res_avail.status_code != 200: 
                 break
-                
-            data = response.json()
-            users = data.get('users', [])
             
-            if not users:
-                break
+            data_avail = res_avail.json()
+            for u in data_avail.get('users', []):
+                ac_id = u.get('id')
                 
-            # Cruza o email do Aircall com o seu AGENTS_MAP
-            for u in users:
-                email = u.get('email', '').lower()
-                if email in AGENTS_MAP:
-                    intercom_id = AGENTS_MAP[email]
-                    status_agentes[intercom_id] = u.get('availability', 'offline')
+                # Se o ID recebido pertence a um agente do nosso mapa
+                if ac_id in aircall_id_to_intercom:
+                    intercom_id = aircall_id_to_intercom[ac_id]
                     
-            if data.get('meta', {}).get('next_page_link'):
-                page += 1
-            else:
+                    # Pega o status exato e garante formatação correta
+                    status = str(u.get('availability', 'offline')).lower().strip()
+                    status_agentes[intercom_id] = status
+                    
+            if not data_avail.get('meta', {}).get('next_page_link'): 
                 break
+            page += 1
         except Exception as e:
-            print(f"Erro ao buscar status no Aircall: {e}")
+            print(f"Erro ao buscar disponibilidades no Aircall: {e}")
             break
             
     return status_agentes
