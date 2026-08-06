@@ -672,9 +672,16 @@ def atualizar_painel():
     st.markdown("---")
     with st.expander("ℹ️ **Legenda e Ações**"):
         st.markdown("""
-        * 🟢/🔴 **Status:** Online ou Ausente (Away).
+        **💬 Intercom (Tickets)**
+        * 🟢/🔴 **Status Int.:** Online ou Ausente (Away).
         * ⚠️ **Sobrecarga:** Agente com 10+ tickets abertos.
         * ⚡ **Alta Demanda:** Agente recebeu 3+ tickets em 30min.
+        
+        **📞 Aircall (Telefonia)**
+        * 🟢 **Disp. / 📱 Mobile:** Online e disponível para receber ligações.
+        * 📞 **Em Chamada / 🔔 Chamando:** Atualmente em atendimento.
+        * 📝 **Pós-chamada:** Finalizando o registro do atendimento anterior.
+        * 🔴 **Offline / ☕ Pausa / 🍽️ Almoço / ⛔ Ocupado:** Indisponível para receber chamadas.
         """)
 
 atualizar_painel()
