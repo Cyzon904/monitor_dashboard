@@ -383,7 +383,8 @@ def atualizar_painel():
     ids_time = list(ids_time_set)
     ultimas = sorted(ultimas_temp, key=lambda x: x['created_at'], reverse=True)[:10]
 
-    # --- NOVO: Chama a função de status do Aircall ---
+    stats_aircall, total_atendidas, detalhes_calls = get_aircall_stats(ts_inicio)
+
     status_aircall_agentes = get_aircall_users_status()
     
     # --- NOVO: Mapeamento visual para o status do Aircall ---
@@ -522,7 +523,16 @@ def atualizar_painel():
             pd.DataFrame(tabela), 
             use_container_width=True, 
             hide_index=True,
-            column_order=["Status", "Agente", "Abertos", "📞 Aircall", "Volume Período", "Recente (30m)", "Pausados"]
+            column_order=[
+                "Status Int.", 
+                "Status Aircall", 
+                "Agente", 
+                "Abertos", 
+                "📞 Aircall", 
+                "Volume Período", 
+                "Recente (30m)", 
+                "Pausados"
+            ]
         )
         
         st.markdown("---")
