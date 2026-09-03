@@ -388,6 +388,7 @@ def atualizar_painel():
         
         for ticket in fila_do_time:
             ticket['nome_time'] = nome_do_time
+            ticket['team_id'] = t_id
             
         fila.extend(fila_do_time)
         
@@ -479,7 +480,7 @@ def atualizar_painel():
 
     msg_alerta = []
     
-    fila_para_alerta = [ticket for ticket in fila if ticket.get('nome_time') != "(Teste) Atendimento inicial"]
+    fila_para_alerta = [ticket for ticket in fila if ticket.get('team_id') != "11498964"]
     
     if len(fila_para_alerta) > 0:
         msg_alerta.append(f"🔥 *CRÍTICO:* Existem *{len(fila_para_alerta)} clientes* aguardando na fila!")
