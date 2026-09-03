@@ -21,11 +21,12 @@ except KeyError:
     st.error("❌ Erro Crítico: 'INTERCOM_APP_ID' não encontrado no secrets.toml")
     st.stop()
 
-TEAMS_IDS = ["2975006", "1972225"] 
+TEAMS_IDS = ["2975006", "1972225", "11498964"]
 
 NOMES_TIMES = {
     2975006: "Customer Success - Atendimento - Distribuição das conversas",
-    1972225: "Customer Success"
+    1972225: "Customer Success",
+    11498964: "(Teste) Atendimento inicial"
 }
 
 META_AGENTES = 4
@@ -478,8 +479,10 @@ def atualizar_painel():
 
     msg_alerta = []
     
-    if len(fila) > 0:
-        msg_alerta.append(f"🔥 *CRÍTICO:* Existem *{len(fila)} clientes* aguardando na fila!")
+    fila_para_alerta = [ticket for ticket in fila if ticket.get('nome_time') != "(Teste) Atendimento inicial"]
+    
+    if len(fila_para_alerta) > 0:
+        msg_alerta.append(f"🔥 *CRÍTICO:* Existem *{len(fila_para_alerta)} clientes* aguardando na fila!")
     
     if online < META_AGENTES:
         msg_alerta.append(f"⚠️ *ATENÇÃO INTERCOM:* Equipe abaixo da meta! Apenas *{online}/{META_AGENTES}* online.")
