@@ -26,7 +26,7 @@ TEAMS_IDS = ["2975006", "1972225", "11498964"]
 NOMES_TIMES = {
     "2975006": "Customer Success - Atendimento - Distribuição das conversas",
     "1972225": "Customer Success",
-    "11498964": "(Teste) Atendimento inicial"
+    "11498964": "Atendimento inicial"
 }
 
 META_AGENTES = 4
